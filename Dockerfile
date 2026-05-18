@@ -12,7 +12,8 @@ RUN apt-get update \
         unzip \
         zip \
     && docker-php-ext-install pdo pdo_sqlite zip \
-    && a2enmod rewrite \
+    && a2dismod mpm_event mpm_worker || true \
+    && a2enmod mpm_prefork rewrite \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

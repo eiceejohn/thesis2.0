@@ -106,6 +106,7 @@
         }
         .editable:focus { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(31,95,189,.12); }
         .enrollment-input { width: 74px; }
+        .computed-input { background: #f8fafc; color: var(--ink); font-weight: 700; }
         .computed-value { color: var(--ink); font-weight: 700; }
         .dashboard-summary { min-width: 2360px; }
         .dashboard-summary th, .dashboard-summary td {

@@ -63,7 +63,7 @@ class ExampleTest extends TestCase
                     $rowId => [
                         'male_learners' => 80,
                         'female_learners' => 90,
-                        'learners' => 170,
+                        'learners' => 1,
                         'sections' => 4,
                         'available_teachers' => 3,
                     ],
@@ -82,6 +82,44 @@ class ExampleTest extends TestCase
             'shortage' => 2,
             'surplus' => 0,
         ]);
+    }
+
+    public function test_school_audit_shows_auto_switching_picker_without_view_school_button(): void
+    {
+        $user = User::factory()->create();
+        $importId = DB::table('audit_imports')->insertGetId([
+            'file_name' => 'test.xlsx',
+            'school_year' => '2025-2026',
+            'sheet_count' => 1,
+            'row_count' => 1,
+            'imported_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('school_grade_audits')->insert([
+            'audit_import_id' => $importId,
+            'school_code' => 'BES',
+            'grade_level' => 1,
+            'male_learners' => 80,
+            'female_learners' => 90,
+            'learners' => 170,
+            'sections' => 5,
+            'class_size' => 34,
+            'required_teachers' => 4,
+            'available_teachers' => 3,
+            'surplus' => 0,
+            'shortage' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('schools'))
+            ->assertOk()
+            ->assertSee('data-school-select', false)
+            ->assertSee('data-school-panel="BES"', false)
+            ->assertDontSee('View School');
     }
 
     public function test_surplus_is_recalculated_from_teacher_requirement_and_actual_teachers(): void

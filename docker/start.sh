@@ -37,8 +37,12 @@ fi
 mkdir -p "$(dirname "$DB_DATABASE")" storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache
 touch "$DB_DATABASE"
 
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
 php artisan migrate --force
 php artisan db:seed --force
+php artisan audit:recalculate --no-interaction
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

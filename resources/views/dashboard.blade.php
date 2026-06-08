@@ -41,9 +41,9 @@
             <div class="hint">Across grade levels</div>
         </div>
         <div class="card pad stat">
-            <div class="label">Teacher Gap</div>
-            <div class="value">{{ number_format(($totals->shortage ?? 0) - ($totals->surplus ?? 0)) }}</div>
-            <div class="hint">Shortage minus surplus</div>
+            <div class="label">Excess/Shortage</div>
+            <div class="value">{{ number_format($totals->excess_shortage ?? 0) }}</div>
+            <div class="hint">Actual minus required teachers</div>
         </div>
     </section>
 
@@ -65,7 +65,7 @@
                         <th rowspan="2">Average Class Size</th>
                         <th rowspan="2">Actual No. Of Teachers</th>
                         <th rowspan="2">Required No. Of Teachers</th>
-                        <th rowspan="2">Need Teachers</th>
+                        <th rowspan="2">Excess/Shortage</th>
                     </tr>
                     <tr>
                         @foreach ($gradeColumns as $grade)
@@ -94,8 +94,8 @@
                             <td class="num">{{ number_format($school->available_teachers) }}</td>
                             <td class="num">{{ number_format($school->required_teachers) }}</td>
                             <td class="num">
-                                <span class="badge {{ $school->shortage > 0 ? 'danger' : 'ok' }}">
-                                    {{ number_format($school->shortage) }}
+                                <span class="badge {{ $school->excess_shortage < 0 ? 'danger' : 'ok' }}">
+                                    {{ number_format($school->excess_shortage) }}
                                 </span>
                             </td>
                         </tr>

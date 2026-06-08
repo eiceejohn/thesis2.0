@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TeacherAuditCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -10,29 +11,9 @@ use Illuminate\View\View;
 
 class AuditDashboardController extends Controller
 {
-    private const GRADE_LABELS = [
-        1 => 'Kinder',
-        2 => 'Grade 1',
-        3 => 'Grade 2',
-        4 => 'Grade 3',
-        5 => 'Grade 4',
-        6 => 'Grade 5',
-        7 => 'Grade 6',
-        8 => 'SNED',
-    ];
-
-    private const PARAMETER_LEVELS = [
-        1 => 'Kindergarten',
-        2 => 'Grade 1',
-        3 => 'Grade 2',
-        4 => 'Grade 3',
-        5 => 'Grade 4',
-        6 => 'Grade 5',
-        7 => 'Grade 6',
-        8 => 'Multigrade',
-    ];
-
-    private array $teacherRules = [];
+    public function __construct(private TeacherAuditCalculator $calculator)
+    {
+    }
 
     public function index(Request $request): View
     {
@@ -125,10 +106,10 @@ class AuditDashboardController extends Controller
                     continue;
                 }
 
-                $classesToOrganize = $this->classesToOrganize($learners, (int) $auditRow->grade_level);
+                $classesToOrganize = $this->calculator->classesToOrganize($learners, (int) $auditRow->grade_level);
                 $classSize = $sections > 0 ? round($learners / $sections, 2) : 0;
-                $requiredTeachers = $this->requiredTeachers($classesToOrganize, (int) $auditRow->grade_level);
-                $difference = $requiredTeachers - $availableTeachers;
+                $requiredTeachers = $this->calculator->requiredTeachers($classesToOrganize, (int) $auditRow->grade_level);
+                $excessShortage = $availableTeachers - $requiredTeachers;
 
                 DB::table('school_grade_audits')
                     ->where('id', $id)
@@ -141,8 +122,8 @@ class AuditDashboardController extends Controller
                         'class_size' => $classSize,
                         'required_teachers' => $requiredTeachers,
                         'available_teachers' => $availableTeachers,
-                        'surplus' => max(-$difference, 0),
-                        'shortage' => max($difference, 0),
+                        'surplus' => max($excessShortage, 0),
+                        'shortage' => max(-$excessShortage, 0),
                         'updated_at' => now(),
                     ]);
             }
@@ -172,7 +153,7 @@ class AuditDashboardController extends Controller
 
     private function gradeColumns(): Collection
     {
-        return collect(self::GRADE_LABELS)
+        return collect($this->calculator->gradeLabels())
             ->map(fn (string $label, int $level) => [
                 'level' => $level,
                 'label' => $label,
@@ -185,7 +166,7 @@ class AuditDashboardController extends Controller
         $gradesByLevel = $rows->keyBy('grade_level');
         $grades = [];
 
-        foreach (array_keys(self::GRADE_LABELS) as $gradeLevel) {
+        foreach (array_keys($this->calculator->gradeLabels()) as $gradeLevel) {
             $grades[$gradeLevel] = $gradesByLevel->get($gradeLevel) ?? $this->emptyGradeRow($gradeLevel);
         }
 
@@ -208,6 +189,7 @@ class AuditDashboardController extends Controller
             'classes_to_organize' => $schools->sum('classes_to_organize'),
             'required_teachers' => $schools->sum('required_teachers'),
             'available_teachers' => $schools->sum('available_teachers'),
+            'excess_shortage' => $schools->sum('excess_shortage'),
             'shortage' => $schools->sum('shortage'),
             'surplus' => $schools->sum('surplus'),
             'class_size' => $schools->sum('sections') > 0
@@ -226,6 +208,7 @@ class AuditDashboardController extends Controller
             'classes_to_organize' => $rows->sum('classes_to_organize'),
             'required_teachers' => $rows->sum('required_teachers'),
             'available_teachers' => $rows->sum('available_teachers'),
+            'excess_shortage' => $rows->sum('excess_shortage'),
             'shortage' => $rows->sum('shortage'),
             'surplus' => $rows->sum('surplus'),
             'class_size' => $rows->sum('sections') > 0
@@ -236,27 +219,14 @@ class AuditDashboardController extends Controller
 
     private function withComputedAuditValues(object $row): object
     {
-        $rule = $this->teacherRule((int) $row->grade_level);
-        $row->grade_label = self::GRADE_LABELS[(int) $row->grade_level] ?? 'Grade '.$row->grade_level;
-        $row->male_learners = (int) ($row->male_learners ?? 0);
-        $row->female_learners = (int) ($row->female_learners ?? 0);
-        $row->section_divisor = $rule['section_divisor'];
-        $row->teacher_factor = $rule['teacher_factor'];
-        $row->classes_to_organize = $this->classesToOrganize((int) $row->learners, (int) $row->grade_level);
-        $row->class_size = (int) $row->sections > 0 ? round((int) $row->learners / (int) $row->sections, 2) : 0;
-        $row->required_teachers = $this->requiredTeachers((int) $row->classes_to_organize, (int) $row->grade_level);
-        $difference = (int) $row->required_teachers - (int) $row->available_teachers;
-        $row->surplus = max(-$difference, 0);
-        $row->shortage = max($difference, 0);
-
-        return $row;
+        return $this->calculator->withComputedValues($row);
     }
 
     private function emptyGradeRow(int $gradeLevel): object
     {
         return (object) [
             'grade_level' => $gradeLevel,
-            'grade_label' => self::GRADE_LABELS[$gradeLevel] ?? 'Grade '.$gradeLevel,
+            'grade_label' => $this->calculator->gradeLabels()[$gradeLevel] ?? 'Grade '.$gradeLevel,
             'male_learners' => 0,
             'female_learners' => 0,
             'learners' => 0,
@@ -265,59 +235,10 @@ class AuditDashboardController extends Controller
             'class_size' => 0,
             'required_teachers' => 0,
             'available_teachers' => 0,
+            'excess_shortage' => 0,
             'surplus' => 0,
             'shortage' => 0,
         ];
-    }
-
-    private function classesToOrganize(int $learners, int $gradeLevel): int
-    {
-        if ($learners <= 0) {
-            return 0;
-        }
-
-        $rule = $this->teacherRule($gradeLevel);
-
-        return (int) ceil($learners / max($rule['section_divisor'], 1));
-    }
-
-    private function requiredTeachers(int $classesToOrganize, int $gradeLevel): int
-    {
-        if ($classesToOrganize <= 0) {
-            return 0;
-        }
-
-        $rule = $this->teacherRule($gradeLevel);
-
-        return (int) ceil($classesToOrganize * $rule['teacher_factor']);
-    }
-
-    private function teacherRule(int $gradeLevel): array
-    {
-        if (isset($this->teacherRules[$gradeLevel])) {
-            return $this->teacherRules[$gradeLevel];
-        }
-
-        $fallback = config('audit_parameters.teacher_rules.'.$gradeLevel, [
-            'section_divisor' => 1,
-            'teacher_factor' => 1,
-        ]);
-        $level = self::PARAMETER_LEVELS[$gradeLevel] ?? null;
-        $parameter = $level
-            ? DB::table('audit_parameters')->where('level', $level)->first()
-            : null;
-
-        return $this->teacherRules[$gradeLevel] = [
-            'section_divisor' => $this->positiveNumber($parameter->maximum ?? $fallback['section_divisor']),
-            'teacher_factor' => $this->positiveNumber($parameter->teacher_factor ?? $fallback['teacher_factor']),
-        ];
-    }
-
-    private function positiveNumber(mixed $value): float
-    {
-        $number = (float) str_replace(',', '', (string) $value);
-
-        return $number > 0 ? $number : 1;
     }
 
 }

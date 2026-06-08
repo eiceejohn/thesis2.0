@@ -2,7 +2,7 @@
     <div class="topbar">
         <div>
             <h1>School Audit</h1>
-            <p>Review grade-level enrollment, sections, class size, and teacher shortage.</p>
+            <p>Review grade-level enrollment, sections, class size, and teacher excess/shortage.</p>
         </div>
     </div>
 
@@ -57,8 +57,8 @@
             <strong data-summary-value="available_teachers">{{ number_format($summary->available_teachers ?? 0) }}</strong>
         </div>
         <div class="mini-stat">
-            <span>Need Teachers</span>
-            <strong data-summary-value="shortage">{{ number_format($summary->shortage ?? 0) }}</strong>
+            <span>Excess/Shortage</span>
+            <strong data-summary-value="excess_shortage">{{ number_format($summary->excess_shortage ?? 0) }}</strong>
         </div>
     </section>
 
@@ -83,7 +83,7 @@
                                     <th class="num" rowspan="2">Average Class Size</th>
                                     <th class="num" rowspan="2">Actual No. of Teachers</th>
                                     <th class="num" rowspan="2">Required No. of Teachers</th>
-                                    <th class="num" rowspan="2">Need Teachers</th>
+                                    <th class="num" rowspan="2">Excess/Shortage</th>
                                 </tr>
                                 <tr>
                                     <th class="num">Male</th>
@@ -117,7 +117,7 @@
                                             <input class="editable" data-role="available_teachers" type="number" min="0" name="rows[{{ $row->id }}][available_teachers]" value="{{ old("rows.$row->id.available_teachers", $row->available_teachers) }}">
                                         </td>
                                         <td class="num computed-value" data-role="required_teachers">{{ number_format($row->required_teachers) }}</td>
-                                        <td class="num"><span class="badge {{ $row->shortage > 0 ? 'danger' : '' }}" data-role="shortage">{{ number_format($row->shortage) }}</span></td>
+                                        <td class="num"><span class="badge {{ $row->excess_shortage < 0 ? 'danger' : 'ok' }}" data-role="excess_shortage">{{ number_format($row->excess_shortage) }}</span></td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="10">No school audit records found.</td></tr>
@@ -148,20 +148,21 @@
                 sections: document.querySelector('[data-summary-value="sections"]'),
                 required_teachers: document.querySelector('[data-summary-value="required_teachers"]'),
                 available_teachers: document.querySelector('[data-summary-value="available_teachers"]'),
-                shortage: document.querySelector('[data-summary-value="shortage"]'),
+                excess_shortage: document.querySelector('[data-summary-value="excess_shortage"]'),
             };
 
             const numberValue = (input) => Number.parseInt(input?.value || '0', 10) || 0;
             const showNumber = (value) => formatter.format(value);
             const showDecimal = (value) => decimalFormatter.format(value);
 
-            const updateBadge = (badge, shortage) => {
+            const updateBadge = (badge, excessShortage) => {
                 if (!badge) {
                     return;
                 }
 
-                badge.textContent = showNumber(shortage);
-                badge.classList.toggle('danger', shortage > 0);
+                badge.textContent = showNumber(excessShortage);
+                badge.classList.toggle('danger', excessShortage < 0);
+                badge.classList.toggle('ok', excessShortage >= 0);
             };
 
             const recalculateRow = (row) => {
@@ -183,20 +184,20 @@
                 const classSize = sections > 0 ? total / sections : 0;
                 const requiredTeachers = classesToOrganize > 0 ? Math.ceil(classesToOrganize * factor) : 0;
                 const availableTeachers = numberValue(availableInput);
-                const shortage = Math.max(requiredTeachers - availableTeachers, 0);
+                const excessShortage = availableTeachers - requiredTeachers;
 
                 totalInput.value = total;
                 row.querySelector('[data-role="classes_to_organize"]').textContent = showNumber(classesToOrganize);
                 row.querySelector('[data-role="class_size"]').textContent = showDecimal(classSize);
                 row.querySelector('[data-role="required_teachers"]').textContent = showNumber(requiredTeachers);
-                updateBadge(row.querySelector('[data-role="shortage"]'), shortage);
+                updateBadge(row.querySelector('[data-role="excess_shortage"]'), excessShortage);
 
                 return {
                     learners: total,
                     sections,
                     required_teachers: requiredTeachers,
                     available_teachers: availableTeachers,
-                    shortage,
+                    excess_shortage: excessShortage,
                 };
             };
 
@@ -206,7 +207,7 @@
                     sections: 0,
                     required_teachers: 0,
                     available_teachers: 0,
-                    shortage: 0,
+                    excess_shortage: 0,
                 };
 
                 panel.querySelectorAll('[data-audit-row]').forEach((row) => {

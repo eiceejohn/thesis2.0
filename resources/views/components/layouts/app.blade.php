@@ -86,7 +86,10 @@
         .bar-row { display: grid; grid-template-columns: 70px 1fr 58px; gap: 10px; align-items: center; font-size: 13px; }
         .track { height: 9px; background: #e9eef5; border-radius: 999px; overflow: hidden; }
         .fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--gold)); }
-        .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+        .filters { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
+        .filter-field { display: grid; gap: 6px; min-width: 220px; }
+        .filter-field.wide { min-width: 340px; }
+        .filter-field span { color: var(--muted); font-size: 12px; }
         select, input {
             height: 42px; border: 1px solid var(--line); border-radius: 7px; padding: 0 12px;
             background: var(--white); color: var(--ink);
@@ -102,6 +105,22 @@
             padding: 0 9px; text-align: right; background: #fff;
         }
         .editable:focus { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(31,95,189,.12); }
+        .enrollment-input { width: 74px; }
+        .computed-value { color: var(--ink); font-weight: 700; }
+        .dashboard-summary { min-width: 2360px; }
+        .dashboard-summary th, .dashboard-summary td {
+            padding: 8px 9px; text-align: center; font-size: 12px; vertical-align: middle;
+        }
+        .dashboard-summary th {
+            background: #fff; border: 1px solid var(--line); color: var(--ink); text-transform: none;
+        }
+        .dashboard-summary td { border: 1px solid var(--line); }
+        .dashboard-summary .school-cell {
+            min-width: 230px; text-align: left; position: sticky; left: 0; background: #fff; z-index: 1;
+        }
+        .dashboard-summary thead .school-cell { z-index: 2; }
+        .school-audit-table { min-width: 1320px; }
+        .school-audit-table th { text-transform: none; white-space: normal; vertical-align: bottom; }
         .notice {
             border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;
             border: 1px solid #cfe1fb; background: var(--blue-soft); color: var(--blue-dark);
@@ -117,6 +136,7 @@
             .shell { grid-template-columns: 1fr; }
             .sidebar { position: static; }
             .stats, .two, .summary-strip { grid-template-columns: 1fr; }
+            .filter-field, .filter-field.wide { min-width: 100%; }
             .main { padding: 20px; }
             .topbar { align-items: flex-start; flex-direction: column; }
         }

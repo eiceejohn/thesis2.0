@@ -67,10 +67,33 @@ class TeacherAuditImporter
 
         foreach ($rows as $row) {
             $cells = $row['cells'];
-            $learners = $this->number($cells['C'] ?? null);
-            $sections = $this->number($cells['D'] ?? null);
+            $maleLearners = $this->number($cells['B'] ?? null);
+            $femaleLearners = $this->number($cells['C'] ?? null);
+            $splitTotal = $this->number($cells['D'] ?? null);
+            $splitSections = $this->number($cells['E'] ?? null);
+            $hasSplitEnrollment = ($maleLearners > 0 || $femaleLearners > 0 || $splitTotal > 0) && $splitSections > 0;
 
-            if ($row['number'] < 10 || isset($cells['B']) || $learners <= 0 || $sections <= 0) {
+            if ($hasSplitEnrollment) {
+                $learners = $splitTotal > 0 ? $splitTotal : $maleLearners + $femaleLearners;
+                $sections = $splitSections;
+                $classSize = $this->number($cells['G'] ?? null);
+                $availableTeachers = $this->number($cells['H'] ?? null);
+                $requiredTeachers = $this->number($cells['I'] ?? null);
+                $surplus = $this->number($cells['J'] ?? null);
+                $shortage = $this->number($cells['K'] ?? null);
+            } else {
+                $maleLearners = 0;
+                $femaleLearners = 0;
+                $learners = $this->number($cells['C'] ?? null);
+                $sections = $this->number($cells['D'] ?? null);
+                $classSize = $this->number($cells['E'] ?? null);
+                $availableTeachers = $this->number($cells['G'] ?? null);
+                $requiredTeachers = $this->number($cells['H'] ?? null);
+                $surplus = $this->number($cells['I'] ?? null);
+                $shortage = $this->number($cells['J'] ?? null);
+            }
+
+            if ($row['number'] < 10 || (! $hasSplitEnrollment && isset($cells['B'])) || $learners <= 0 || $sections <= 0) {
                 continue;
             }
 
@@ -78,13 +101,15 @@ class TeacherAuditImporter
                 'audit_import_id' => $importId,
                 'school_code' => Str::upper($schoolCode),
                 'grade_level' => $grade++,
+                'male_learners' => (int) round($maleLearners),
+                'female_learners' => (int) round($femaleLearners),
                 'learners' => (int) round($learners),
                 'sections' => (int) round($sections),
-                'class_size' => round($this->number($cells['E'] ?? null), 2),
-                'required_teachers' => (int) round($this->number($cells['H'] ?? null)),
-                'available_teachers' => (int) round($this->number($cells['G'] ?? null)),
-                'surplus' => (int) round($this->number($cells['I'] ?? null)),
-                'shortage' => (int) round($this->number($cells['J'] ?? null)),
+                'class_size' => round($classSize, 2),
+                'required_teachers' => (int) round($requiredTeachers),
+                'available_teachers' => (int) round($availableTeachers),
+                'surplus' => (int) round($surplus),
+                'shortage' => (int) round($shortage),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

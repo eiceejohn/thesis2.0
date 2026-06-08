@@ -7,13 +7,28 @@
     </div>
 
     <form class="filters" method="GET" action="{{ route('schools') }}">
-        <select name="school" aria-label="School">
-            @foreach ($schoolOptions as $school)
-                <option value="{{ $school['code'] }}" @selected($selectedSchool === $school['code'])>
-                    {{ $school['name'] }} ({{ $school['code'] }})
-                </option>
-            @endforeach
-        </select>
+        <label class="filter-field">
+            <span>Basic Education</span>
+            <select name="basic_education" aria-label="Basic Education">
+                <option value="Elementary" @selected($basicEducation === 'Elementary')>Elementary</option>
+            </select>
+        </label>
+        <label class="filter-field">
+            <span>School Year</span>
+            <select name="school_year" aria-label="School Year">
+                <option value="{{ $schoolYear }}" selected>{{ $schoolYear }}</option>
+            </select>
+        </label>
+        <label class="filter-field wide">
+            <span>School</span>
+            <select name="school" aria-label="School">
+                @foreach ($schoolOptions as $school)
+                    <option value="{{ $school['code'] }}" @selected($selectedSchool === $school['code'])>
+                        {{ $school['name'] }} ({{ $school['code'] }})
+                    </option>
+                @endforeach
+            </select>
+        </label>
         <button class="button" type="submit">View School</button>
     </form>
 
@@ -51,49 +66,56 @@
     <div class="card">
         <div class="card-title" style="padding:18px 18px 0">
             <h2>{{ $selectedSchoolName }} <span class="muted">({{ $selectedSchool }})</span></h2>
-            <span class="muted">{{ $rows->count() }} grade levels - source fields editable</span>
+            <span class="muted">SY {{ $schoolYear }} - {{ $rows->count() }} grade levels - computed from Parameters</span>
         </div>
         <form method="POST" action="{{ route('schools.update', $selectedSchool) }}">
             @csrf
             @method('PUT')
             <div class="table-wrap">
-                <table>
+                <table class="school-audit-table">
                     <thead>
                         <tr>
-                            <th>Grade</th>
-                            <th class="num">Enrolled</th>
-                            <th class="num">Sections</th>
-                            <th class="num">Class Size</th>
-                            <th class="num">Teacher Requirement</th>
-                            <th class="num">Current Teachers</th>
-                            <th class="num">Surplus</th>
-                            <th class="num">Need Teachers</th>
+                            <th rowspan="2">Grade</th>
+                            <th class="num" colspan="3">Enrollment</th>
+                            <th class="num" rowspan="2">Actual Classes Organized</th>
+                            <th class="num" rowspan="2">Classes to be Organized</th>
+                            <th class="num" rowspan="2">Average Class Size</th>
+                            <th class="num" rowspan="2">Actual No. of Teachers</th>
+                            <th class="num" rowspan="2">Required No. of Teachers</th>
+                            <th class="num" rowspan="2">Need Teachers</th>
+                        </tr>
+                        <tr>
+                            <th class="num">Male</th>
+                            <th class="num">Female</th>
+                            <th class="num">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($rows as $row)
                             <tr>
-                                <td><strong>Grade {{ $row->grade_level }}</strong></td>
+                                <td><strong>{{ $row->grade_label }}</strong></td>
                                 <td class="num">
-                                    <input class="editable" type="number" min="0" name="rows[{{ $row->id }}][learners]" value="{{ old("rows.$row->id.learners", $row->learners) }}">
+                                    <input class="editable enrollment-input" type="number" min="0" name="rows[{{ $row->id }}][male_learners]" value="{{ old("rows.$row->id.male_learners", $row->male_learners ?: '') }}">
+                                </td>
+                                <td class="num">
+                                    <input class="editable enrollment-input" type="number" min="0" name="rows[{{ $row->id }}][female_learners]" value="{{ old("rows.$row->id.female_learners", $row->female_learners ?: '') }}">
+                                </td>
+                                <td class="num">
+                                    <input class="editable enrollment-input" type="number" min="0" name="rows[{{ $row->id }}][learners]" value="{{ old("rows.$row->id.learners", $row->learners) }}">
                                 </td>
                                 <td class="num">
                                     <input class="editable" type="number" min="1" name="rows[{{ $row->id }}][sections]" value="{{ old("rows.$row->id.sections", $row->sections) }}">
                                 </td>
-                                <td class="num">
-                                    <input class="editable" type="number" min="0" step="0.01" name="rows[{{ $row->id }}][class_size]" value="{{ old("rows.$row->id.class_size", number_format($row->class_size, 2, '.', '')) }}">
-                                </td>
-                                <td class="num">
-                                    <input class="editable" type="number" min="0" name="rows[{{ $row->id }}][required_teachers]" value="{{ old("rows.$row->id.required_teachers", $row->required_teachers) }}">
-                                </td>
+                                <td class="num computed-value">{{ number_format($row->classes_to_organize) }}</td>
+                                <td class="num computed-value">{{ number_format($row->class_size, 2) }}</td>
                                 <td class="num">
                                     <input class="editable" type="number" min="0" name="rows[{{ $row->id }}][available_teachers]" value="{{ old("rows.$row->id.available_teachers", $row->available_teachers) }}">
                                 </td>
-                                <td class="num"><span class="badge ok">{{ number_format($row->surplus) }}</span></td>
+                                <td class="num computed-value">{{ number_format($row->required_teachers) }}</td>
                                 <td class="num"><span class="badge {{ $row->shortage > 0 ? 'danger' : '' }}">{{ number_format($row->shortage) }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="8">No school audit records found.</td></tr>
+                            <tr><td colspan="10">No school audit records found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -28,7 +28,7 @@ class ExampleTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_school_audit_updates_editable_fields_and_recalculates_final_two_columns(): void
+    public function test_school_audit_updates_manual_fields_and_recalculates_computed_columns(): void
     {
         $user = User::factory()->create();
         $importId = DB::table('audit_imports')->insertGetId([
@@ -43,7 +43,9 @@ class ExampleTest extends TestCase
         $rowId = DB::table('school_grade_audits')->insertGetId([
             'audit_import_id' => $importId,
             'school_code' => 'BES',
-            'grade_level' => 1,
+            'grade_level' => 2,
+            'male_learners' => 0,
+            'female_learners' => 0,
             'learners' => 100,
             'sections' => 4,
             'class_size' => 25,
@@ -59,10 +61,10 @@ class ExampleTest extends TestCase
             ->put(route('schools.update', 'BES'), [
                 'rows' => [
                     $rowId => [
-                        'learners' => 120,
+                        'male_learners' => 80,
+                        'female_learners' => 90,
+                        'learners' => 170,
                         'sections' => 4,
-                        'class_size' => 31,
-                        'required_teachers' => 5,
                         'available_teachers' => 3,
                     ],
                 ],
@@ -71,8 +73,10 @@ class ExampleTest extends TestCase
 
         $this->assertDatabaseHas('school_grade_audits', [
             'id' => $rowId,
-            'learners' => 120,
-            'class_size' => 31,
+            'male_learners' => 80,
+            'female_learners' => 90,
+            'learners' => 170,
+            'class_size' => 42.5,
             'required_teachers' => 5,
             'available_teachers' => 3,
             'shortage' => 2,
@@ -80,7 +84,7 @@ class ExampleTest extends TestCase
         ]);
     }
 
-    public function test_surplus_is_recalculated_from_teacher_requirement_and_current_teachers(): void
+    public function test_surplus_is_recalculated_from_teacher_requirement_and_actual_teachers(): void
     {
         $user = User::factory()->create();
         $importId = DB::table('audit_imports')->insertGetId([
@@ -96,6 +100,8 @@ class ExampleTest extends TestCase
             'audit_import_id' => $importId,
             'school_code' => 'BES',
             'grade_level' => 4,
+            'male_learners' => 0,
+            'female_learners' => 0,
             'learners' => 207,
             'sections' => 6,
             'class_size' => 34.5,
@@ -113,8 +119,6 @@ class ExampleTest extends TestCase
                     $rowId => [
                         'learners' => 216,
                         'sections' => 6,
-                        'class_size' => 36,
-                        'required_teachers' => 9,
                         'available_teachers' => 11,
                     ],
                 ],

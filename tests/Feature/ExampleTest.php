@@ -119,6 +119,7 @@ class ExampleTest extends TestCase
             ->get(route('schools'))
             ->assertOk()
             ->assertSee('Excess/Shortage')
+            ->assertSee('data-role="class_size">43</td>', false)
             ->assertSee('-2');
     }
 

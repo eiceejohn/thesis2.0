@@ -119,7 +119,7 @@
                                             <input class="editable" data-role="sections" type="number" min="1" name="rows[{{ $row->id }}][sections]" value="{{ old("rows.$row->id.sections", $row->sections) }}">
                                         </td>
                                         <td class="num computed-value" data-role="classes_to_organize">{{ number_format($row->classes_to_organize) }}</td>
-                                        <td class="num computed-value" data-role="class_size">{{ number_format($row->class_size, 2) }}</td>
+                                        <td class="num computed-value" data-role="class_size">{{ number_format(round($row->class_size)) }}</td>
                                         <td class="num">
                                             <input class="editable" data-role="available_teachers" type="number" min="0" name="rows[{{ $row->id }}][available_teachers]" value="{{ old("rows.$row->id.available_teachers", $row->available_teachers) }}">
                                         </td>
@@ -144,10 +144,6 @@
     <script>
         (() => {
             const formatter = new Intl.NumberFormat('en-US');
-            const decimalFormatter = new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            });
             const schoolSelect = document.querySelector('[data-school-select]');
             const panels = [...document.querySelectorAll('[data-school-panel]')];
             const summaryValues = {
@@ -160,7 +156,6 @@
 
             const numberValue = (input) => Number.parseInt(input?.value || '0', 10) || 0;
             const showNumber = (value) => formatter.format(value);
-            const showDecimal = (value) => decimalFormatter.format(value);
 
             const updateBadge = (badge, excessShortage) => {
                 if (!badge) {
@@ -195,7 +190,7 @@
 
                 totalInput.value = total;
                 row.querySelector('[data-role="classes_to_organize"]').textContent = showNumber(classesToOrganize);
-                row.querySelector('[data-role="class_size"]').textContent = showDecimal(classSize);
+                row.querySelector('[data-role="class_size"]').textContent = showNumber(Math.round(classSize));
                 row.querySelector('[data-role="required_teachers"]').textContent = showNumber(requiredTeachers);
                 updateBadge(row.querySelector('[data-role="excess_shortage"]'), excessShortage);
 

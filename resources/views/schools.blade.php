@@ -19,16 +19,23 @@
                 <option value="{{ $schoolYear }}" selected>{{ $schoolYear }}</option>
             </select>
         </label>
-        <label class="filter-field wide">
-            <span>School</span>
-            <select name="school" aria-label="School" data-school-select>
-                @foreach ($schoolOptions as $school)
-                    <option value="{{ $school['code'] }}" @selected($selectedSchool === $school['code'])>
-                        {{ $school['name'] }} ({{ $school['code'] }})
-                    </option>
-                @endforeach
-            </select>
-        </label>
+        @if (auth()->user()->isAdmin())
+            <label class="filter-field wide">
+                <span>School</span>
+                <select name="school" aria-label="School" data-school-select>
+                    @foreach ($schoolOptions as $school)
+                        <option value="{{ $school['code'] }}" @selected($selectedSchool === $school['code'])>
+                            {{ $school['name'] }} ({{ $school['code'] }})
+                        </option>
+                    @endforeach
+                </select>
+            </label>
+        @else
+            <label class="filter-field wide">
+                <span>School</span>
+                <div class="fixed-filter">{{ $selectedSchoolName }} ({{ $selectedSchool }})</div>
+            </label>
+        @endif
     </form>
 
     @if (session('status'))

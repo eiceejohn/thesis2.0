@@ -54,25 +54,45 @@
         </div>
         <div class="table-wrap">
             <table class="dashboard-summary">
+                <colgroup>
+                    <col class="school-column">
+                    @foreach ($gradeColumns as $grade)
+                        <col class="enrollment-column">
+                        <col class="enrollment-column">
+                        <col class="enrollment-column">
+                    @endforeach
+                    <col class="enrollment-column">
+                    <col class="enrollment-column">
+                    <col class="enrollment-column">
+                    <col class="spacer-column">
+                    @for ($column = 0; $column < 6; $column++)
+                        <col class="metric-column">
+                    @endfor
+                </colgroup>
                 <thead>
                     <tr>
                         <th class="school-cell" rowspan="2">SCHOOL</th>
                         @foreach ($gradeColumns as $grade)
                             <th colspan="3">{{ str_replace('Grade ', 'Grade', $grade['label']) }}</th>
                         @endforeach
-                        <th rowspan="2">Actual Classes Organized</th>
-                        <th rowspan="2">Classes to be Organized</th>
-                        <th rowspan="2">Average Class Size</th>
-                        <th rowspan="2">Actual No. Of Teachers</th>
-                        <th rowspan="2">Required No. Of Teachers</th>
-                        <th rowspan="2">Excess/Shortage</th>
+                        <th class="total-group" colspan="3">TOTAL</th>
+                        <th class="spacer-cell" rowspan="2" aria-hidden="true"></th>
+                        <th class="metric-heading" rowspan="2">Actual Classes<br>Organized</th>
+                        <th class="metric-heading" rowspan="2">Classes to be<br>Organized</th>
+                        <th class="metric-heading" rowspan="2">Average<br>Class Size</th>
+                        <th class="metric-heading" rowspan="2">Actual No.<br>of Teachers</th>
+                        <th class="metric-heading" rowspan="2">Required No.<br>of Teachers</th>
+                        <th class="metric-heading" rowspan="2">Excess/<br>Shortage</th>
                     </tr>
                     <tr>
                         @foreach ($gradeColumns as $grade)
-                            <th>Male</th>
-                            <th>Female</th>
-                            <th>Total</th>
+                            <th>M</th>
+                            <th>F</th>
+                            <th>T</th>
                         @endforeach
+                        <th class="total-group">M</th>
+                        <th class="total-group">F</th>
+                        <th class="total-group">T</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,6 +108,10 @@
                                 <td class="num">{{ $gradeRow->female_learners ? number_format($gradeRow->female_learners) : '' }}</td>
                                 <td class="num">{{ $gradeRow->learners ? number_format($gradeRow->learners) : '-' }}</td>
                             @endforeach
+                            <td class="num total-group">{{ number_format($school->male_learners) }}</td>
+                            <td class="num total-group">{{ number_format($school->female_learners) }}</td>
+                            <td class="num total-group">{{ number_format($school->learners) }}</td>
+                            <td class="spacer-cell" aria-hidden="true"></td>
                             <td class="num">{{ number_format($school->sections) }}</td>
                             <td class="num">{{ number_format($school->classes_to_organize) }}</td>
                             <td class="num">{{ number_format($school->class_size, 2) }}</td>
@@ -101,7 +125,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ 7 + ($gradeColumns->count() * 3) }}">
+                            <td colspan="{{ 11 + ($gradeColumns->count() * 3) }}">
                                 No audit data yet. Run <strong>php artisan audit:import</strong>.
                             </td>
                         </tr>

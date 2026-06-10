@@ -25,10 +25,28 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'SDO Marikina ICTU',
                 'password' => Hash::make(env('ADMIN_PASSWORD', 'password')),
+                'role' => 'admin',
+                'school_code' => null,
             ],
         );
 
+        $this->seedSchoolAccounts();
         $this->seedAuditData();
+    }
+
+    private function seedSchoolAccounts(): void
+    {
+        foreach (config('audit_schools') as $schoolCode => $schoolName) {
+            User::firstOrCreate(
+                ['school_code' => $schoolCode],
+                [
+                    'name' => $schoolName,
+                    'email' => strtolower($schoolCode).'@deped.gov.ph',
+                    'password' => Hash::make(env('SCHOOL_DEFAULT_PASSWORD', 'password')),
+                    'role' => 'school',
+                ],
+            );
+        }
     }
 
     private function seedAuditData(): void

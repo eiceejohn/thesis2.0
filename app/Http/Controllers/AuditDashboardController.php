@@ -18,7 +18,7 @@ class AuditDashboardController extends Controller
     public function index(Request $request): View
     {
         $import = DB::table('audit_imports')->latest('imported_at')->first();
-        $auditRows = $this->auditRows();
+        $auditRows = $this->auditRows($request->user()->school_code);
         $gradeColumns = $this->gradeColumns();
         $schools = $auditRows
             ->groupBy('school_code')
@@ -33,8 +33,10 @@ class AuditDashboardController extends Controller
 
     public function schools(Request $request): View
     {
-        $selectedSchool = $request->query('school');
+        $assignedSchool = $request->user()->school_code;
+        $selectedSchool = $assignedSchool ?: $request->query('school');
         $schoolOptions = DB::table('school_grade_audits')
+            ->when($assignedSchool, fn ($query) => $query->where('school_code', $assignedSchool))
             ->distinct()
             ->orderBy('school_code')
             ->pluck('school_code')
@@ -48,6 +50,7 @@ class AuditDashboardController extends Controller
         }
 
         $rowsBySchool = DB::table('school_grade_audits')
+            ->when($assignedSchool, fn ($query) => $query->where('school_code', $assignedSchool))
             ->orderBy('school_code')
             ->orderBy('grade_level')
             ->get()
@@ -78,6 +81,10 @@ class AuditDashboardController extends Controller
 
     public function updateSchool(Request $request, string $school): RedirectResponse
     {
+        if ($request->user()->isSchool()) {
+            abort_unless($request->user()->school_code === $school, 403);
+        }
+
         $validated = $request->validate([
             'rows' => ['required', 'array'],
             'rows.*.male_learners' => ['nullable', 'integer', 'min:0', 'max:99999'],
@@ -143,9 +150,10 @@ class AuditDashboardController extends Controller
         return config('audit_schools.'.$code, $code);
     }
 
-    private function auditRows(): Collection
+    private function auditRows(?string $schoolCode = null): Collection
     {
         return DB::table('school_grade_audits')
+            ->when($schoolCode, fn ($query) => $query->where('school_code', $schoolCode))
             ->orderBy('id')
             ->get()
             ->map(fn ($row) => $this->withComputedAuditValues($row));

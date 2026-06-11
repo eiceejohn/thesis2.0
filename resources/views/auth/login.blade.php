@@ -40,7 +40,7 @@
 
         .banner {
             min-height: 100vh;
-            background-image: url("{{ asset('images/deped-marikina-login.jpg') }}");
+            background-image: url("{{ asset('images/deped-marikina-login.png') }}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;

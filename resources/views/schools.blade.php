@@ -9,8 +9,9 @@
     <form class="filters" data-school-filter-form>
         <label class="filter-field">
             <span>Basic Education</span>
-            <select name="basic_education" aria-label="Basic Education">
+            <select name="basic_education" aria-label="Basic Education" data-education-select @disabled(! auth()->user()->isAdmin())>
                 <option value="Elementary" @selected($basicEducation === 'Elementary')>Elementary</option>
+                <option value="High School" @selected($basicEducation === 'High School')>High School</option>
             </select>
         </label>
         <label class="filter-field">
@@ -46,15 +47,21 @@
         <div class="notice error">{{ $errors->first() }}</div>
     @endif
 
-    <section class="summary-strip">
+    <section class="summary-strip {{ $basicEducation === 'High School' ? 'six' : '' }}">
         <div class="mini-stat">
             <span>Total Enrolled</span>
             <strong data-summary-value="learners">{{ number_format($summary->learners ?? 0) }}</strong>
         </div>
         <div class="mini-stat">
-            <span>Sections</span>
+            <span>{{ $basicEducation === 'High School' ? 'Actual Classes' : 'Sections' }}</span>
             <strong data-summary-value="sections">{{ number_format($summary->sections ?? 0) }}</strong>
         </div>
+        @if ($basicEducation === 'High School')
+            <div class="mini-stat">
+                <span>Actual Classrooms</span>
+                <strong data-summary-value="actual_classrooms">{{ number_format($summary->actual_classrooms ?? 0) }}</strong>
+            </div>
+        @endif
         <div class="mini-stat">
             <span>Required Teachers</span>
             <strong data-summary-value="required_teachers">{{ number_format($summary->required_teachers ?? 0) }}</strong>
@@ -82,21 +89,42 @@
                     <div class="table-wrap">
                         <table class="school-audit-table">
                             <thead>
-                                <tr>
-                                    <th rowspan="2">Grade</th>
-                                    <th class="num" colspan="3">Enrollment</th>
-                                    <th class="num" rowspan="2">Actual Classes Organized</th>
-                                    <th class="num" rowspan="2">Classes to be Organized</th>
-                                    <th class="num" rowspan="2">Average Class Size</th>
-                                    <th class="num" rowspan="2">Actual No. of Teachers</th>
-                                    <th class="num" rowspan="2">Required No. of Teachers</th>
-                                    <th class="num" rowspan="2">Excess/Shortage</th>
-                                </tr>
-                                <tr>
-                                    <th class="num">Male</th>
-                                    <th class="num">Female</th>
-                                    <th class="num">Total</th>
-                                </tr>
+                                @if ($basicEducation === 'Elementary')
+                                    <tr>
+                                        <th rowspan="2">Grade</th>
+                                        <th class="num" colspan="3">Enrollment</th>
+                                        <th class="spacer-cell" rowspan="2" aria-hidden="true"></th>
+                                        <th class="num" rowspan="2">Actual Classes Organized</th>
+                                        <th class="num" rowspan="2">Classes to be Organized</th>
+                                        <th class="num" rowspan="2">Average Class Size</th>
+                                        <th class="num" rowspan="2">Actual No. of Teachers</th>
+                                        <th class="num" rowspan="2">Required No. of Teachers</th>
+                                        <th class="num" rowspan="2">Excess/Shortage</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="num">Male</th>
+                                        <th class="num">Female</th>
+                                        <th class="num">Total</th>
+                                    </tr>
+                                @else
+                                    <tr>
+                                        <th rowspan="2">Grade</th>
+                                        <th class="num" colspan="3">Enrollment</th>
+                                        <th class="spacer-cell" rowspan="2" aria-hidden="true"></th>
+                                        <th class="num" rowspan="2">Actual Classrooms</th>
+                                        <th class="num" rowspan="2">Actual Classes Organized</th>
+                                        <th class="num" rowspan="2">Classes to be Organized</th>
+                                        <th class="num" rowspan="2">Average Class Size</th>
+                                        <th class="num" rowspan="2">Actual No. of Teachers</th>
+                                        <th class="num" rowspan="2">Required No. of Teachers</th>
+                                        <th class="num" rowspan="2">Excess/Shortage</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="num">Male</th>
+                                        <th class="num">Female</th>
+                                        <th class="num">Total</th>
+                                    </tr>
+                                @endif
                             </thead>
                             <tbody>
                                 @forelse ($audit->rows as $row)
@@ -106,15 +134,32 @@
                                         data-teacher-factor="{{ $row->teacher_factor }}"
                                     >
                                         <td><strong>{{ $row->grade_label }}</strong></td>
-                                        <td class="num">
-                                            <input class="editable enrollment-input" data-role="male" type="number" min="0" name="rows[{{ $row->id }}][male_learners]" value="{{ old("rows.$row->id.male_learners", $row->male_learners ?: '') }}">
-                                        </td>
-                                        <td class="num">
-                                            <input class="editable enrollment-input" data-role="female" type="number" min="0" name="rows[{{ $row->id }}][female_learners]" value="{{ old("rows.$row->id.female_learners", $row->female_learners ?: '') }}">
-                                        </td>
-                                        <td class="num">
-                                            <input class="editable enrollment-input computed-input" data-role="total" type="number" min="0" name="rows[{{ $row->id }}][learners]" value="{{ old("rows.$row->id.learners", $row->learners) }}" readonly>
-                                        </td>
+                                        @if ($basicEducation === 'Elementary')
+                                            <td class="num">
+                                                <input class="editable enrollment-input" data-role="male" type="number" min="0" name="rows[{{ $row->id }}][male_learners]" value="{{ old("rows.$row->id.male_learners", $row->male_learners ?: '') }}">
+                                            </td>
+                                            <td class="num">
+                                                <input class="editable enrollment-input" data-role="female" type="number" min="0" name="rows[{{ $row->id }}][female_learners]" value="{{ old("rows.$row->id.female_learners", $row->female_learners ?: '') }}">
+                                            </td>
+                                            <td class="num">
+                                                <input class="editable enrollment-input computed-input" data-role="total" type="number" min="0" name="rows[{{ $row->id }}][learners]" value="{{ old("rows.$row->id.learners", $row->learners) }}" readonly>
+                                            </td>
+                                            <td class="spacer-cell" aria-hidden="true"></td>
+                                        @else
+                                            <td class="num">
+                                                <input class="editable enrollment-input" data-role="male" type="number" min="0" name="rows[{{ $row->id }}][male_learners]" value="{{ old("rows.$row->id.male_learners", $row->male_learners ?: '') }}">
+                                            </td>
+                                            <td class="num">
+                                                <input class="editable enrollment-input" data-role="female" type="number" min="0" name="rows[{{ $row->id }}][female_learners]" value="{{ old("rows.$row->id.female_learners", $row->female_learners ?: '') }}">
+                                            </td>
+                                            <td class="num">
+                                                <input class="editable enrollment-input computed-input" data-role="total" type="number" min="0" name="rows[{{ $row->id }}][learners]" value="{{ old("rows.$row->id.learners", $row->learners) }}" readonly>
+                                            </td>
+                                            <td class="spacer-cell" aria-hidden="true"></td>
+                                            <td class="num">
+                                                <input class="editable" data-role="actual_classrooms" type="number" min="0" name="rows[{{ $row->id }}][actual_classrooms]" value="{{ old("rows.$row->id.actual_classrooms", $row->actual_classrooms) }}">
+                                            </td>
+                                        @endif
                                         <td class="num">
                                             <input class="editable" data-role="sections" type="number" min="1" name="rows[{{ $row->id }}][sections]" value="{{ old("rows.$row->id.sections", $row->sections) }}">
                                         </td>
@@ -127,7 +172,7 @@
                                         <td class="num"><span class="badge {{ $row->excess_shortage < 0 ? 'danger' : 'ok' }}" data-role="excess_shortage">{{ number_format($row->excess_shortage) }}</span></td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="10">No school audit records found.</td></tr>
+                                    <tr><td colspan="{{ $basicEducation === 'High School' ? 12 : 11 }}">No {{ $basicEducation }} audit records found.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -144,11 +189,13 @@
     <script>
         (() => {
             const formatter = new Intl.NumberFormat('en-US');
+            const educationSelect = document.querySelector('[data-education-select]');
             const schoolSelect = document.querySelector('[data-school-select]');
             const panels = [...document.querySelectorAll('[data-school-panel]')];
             const summaryValues = {
                 learners: document.querySelector('[data-summary-value="learners"]'),
                 sections: document.querySelector('[data-summary-value="sections"]'),
+                actual_classrooms: document.querySelector('[data-summary-value="actual_classrooms"]'),
                 required_teachers: document.querySelector('[data-summary-value="required_teachers"]'),
                 available_teachers: document.querySelector('[data-summary-value="available_teachers"]'),
                 excess_shortage: document.querySelector('[data-summary-value="excess_shortage"]'),
@@ -172,6 +219,7 @@
                 const femaleInput = row.querySelector('[data-role="female"]');
                 const totalInput = row.querySelector('[data-role="total"]');
                 const sectionsInput = row.querySelector('[data-role="sections"]');
+                const actualClassroomsInput = row.querySelector('[data-role="actual_classrooms"]');
                 const availableInput = row.querySelector('[data-role="available_teachers"]');
                 const male = numberValue(maleInput);
                 const female = numberValue(femaleInput);
@@ -197,6 +245,7 @@
                 return {
                     learners: total,
                     sections,
+                    actual_classrooms: numberValue(actualClassroomsInput),
                     required_teachers: requiredTeachers,
                     available_teachers: availableTeachers,
                     excess_shortage: excessShortage,
@@ -207,6 +256,7 @@
                 const totals = {
                     learners: 0,
                     sections: 0,
+                    actual_classrooms: 0,
                     required_teachers: 0,
                     available_teachers: 0,
                     excess_shortage: 0,
@@ -236,12 +286,22 @@
                 const panel = currentPanel();
                 if (panel) {
                     recalculatePanel(panel);
-                    window.history.replaceState({}, '', `${window.location.pathname}?school=${encodeURIComponent(schoolCode)}`);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('school', schoolCode);
+                    url.searchParams.set('basic_education', educationSelect?.value || 'Elementary');
+                    window.history.replaceState({}, '', url);
                 }
             };
 
             document.querySelector('[data-school-filter-form]')?.addEventListener('submit', (event) => {
                 event.preventDefault();
+            });
+
+            educationSelect?.addEventListener('change', () => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('basic_education', educationSelect.value);
+                url.searchParams.delete('school');
+                window.location.href = url;
             });
 
             schoolSelect?.addEventListener('change', () => {

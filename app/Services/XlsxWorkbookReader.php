@@ -65,13 +65,7 @@ class XlsxWorkbookReader
         $shared = simplexml_load_string($xml);
 
         foreach ($shared->si as $item) {
-            $text = '';
-
-            foreach ($item->xpath('.//t') as $node) {
-                $text .= (string) $node;
-            }
-
-            $strings[] = $text;
+            $strings[] = $this->nodeText($item);
         }
 
         return $strings;
@@ -111,7 +105,7 @@ class XlsxWorkbookReader
         $type = (string) $cell['t'];
 
         if ($type === 'inlineStr') {
-            return trim((string) $cell->is->t);
+            return $this->nodeText($cell->is);
         }
 
         $value = (string) $cell->v;
@@ -121,5 +115,10 @@ class XlsxWorkbookReader
         }
 
         return trim($value);
+    }
+
+    private function nodeText($node): string
+    {
+        return trim(html_entity_decode(strip_tags($node->asXML()), ENT_QUOTES | ENT_XML1));
     }
 }

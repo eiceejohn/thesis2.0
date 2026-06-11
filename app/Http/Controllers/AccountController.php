@@ -12,7 +12,7 @@ class AccountController extends Controller
 {
     public function index(): View
     {
-        $schools = collect(config('audit_schools'));
+        $schools = $this->schools();
         $accounts = User::query()
             ->where('role', 'school')
             ->orderBy('school_code')
@@ -69,7 +69,7 @@ class AccountController extends Controller
             ],
             'school_code' => [
                 'required',
-                Rule::in(array_keys(config('audit_schools'))),
+                Rule::in($this->schools()->keys()->all()),
                 Rule::unique('users', 'school_code')->ignore($account),
             ],
             'password' => [
@@ -79,5 +79,11 @@ class AccountController extends Controller
                 'confirmed',
             ],
         ];
+    }
+
+    private function schools()
+    {
+        return collect(config('audit_schools'))
+            ->merge(config('audit_secondary_schools'));
     }
 }

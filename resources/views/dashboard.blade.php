@@ -1,7 +1,7 @@
 <x-layouts.app title="Dashboard">
     <div class="topbar">
         <div>
-            <h1>Elementary Teacher Audit</h1>
+            <h1>{{ $basicEducation }} Teacher Audit</h1>
             <p>SY {{ $import->school_year ?? '2025-2026' }} staffing overview from the uploaded workbook.</p>
         </div>
         <div class="pill">
@@ -12,8 +12,9 @@
     <form class="filters" method="GET" action="{{ route('dashboard') }}">
         <label class="filter-field">
             <span>Basic Education</span>
-            <select name="basic_education" aria-label="Basic Education">
+            <select name="basic_education" aria-label="Basic Education" onchange="this.form.submit()">
                 <option value="Elementary" @selected($basicEducation === 'Elementary')>Elementary</option>
+                <option value="High School" @selected($basicEducation === 'High School')>High School</option>
             </select>
         </label>
         <label class="filter-field">
@@ -28,7 +29,7 @@
         <div class="card pad stat">
             <div class="label">Schools</div>
             <div class="value">{{ number_format($totals->schools ?? 0) }}</div>
-            <div class="hint">Elementary campuses</div>
+            <div class="hint">{{ $basicEducation }} campuses</div>
         </div>
         <div class="card pad stat">
             <div class="label">Learners</div>
@@ -53,7 +54,8 @@
             <span class="muted">{{ $schools->count() }} records</span>
         </div>
         <div class="table-wrap">
-            <table class="dashboard-summary">
+            @if ($basicEducation === 'Elementary')
+                <table class="dashboard-summary">
                 <colgroup>
                     <col class="school-column">
                     @foreach ($gradeColumns as $grade)
@@ -131,7 +133,90 @@
                         </tr>
                     @endforelse
                 </tbody>
-            </table>
+                </table>
+            @else
+                <table class="dashboard-summary secondary-summary">
+                    <colgroup>
+                        <col class="school-column">
+                        @foreach ($gradeColumns as $grade)
+                            <col class="enrollment-column">
+                            <col class="enrollment-column">
+                            <col class="enrollment-column">
+                        @endforeach
+                        <col class="enrollment-column">
+                        <col class="enrollment-column">
+                        <col class="enrollment-column">
+                        <col class="spacer-column">
+                        @for ($column = 0; $column < 7; $column++)
+                            <col class="metric-column">
+                        @endfor
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="school-cell" rowspan="2">SCHOOL</th>
+                            @foreach ($gradeColumns as $grade)
+                                <th colspan="3">{{ str_replace('Grade ', 'G', $grade['label']) }}</th>
+                            @endforeach
+                            <th class="total-group" colspan="3">TOTAL</th>
+                            <th class="spacer-cell" rowspan="2" aria-hidden="true"></th>
+                            <th class="metric-heading" rowspan="2">Actual<br>Classrooms</th>
+                            <th class="metric-heading" rowspan="2">Actual Classes<br>Organized</th>
+                            <th class="metric-heading" rowspan="2">Classes to be<br>Organized</th>
+                            <th class="metric-heading" rowspan="2">Average<br>Class Size</th>
+                            <th class="metric-heading" rowspan="2">Actual No.<br>of Teachers</th>
+                            <th class="metric-heading" rowspan="2">Required No.<br>of Teachers</th>
+                            <th class="metric-heading" rowspan="2">Excess/<br>Shortage</th>
+                        </tr>
+                        <tr>
+                            @foreach ($gradeColumns as $grade)
+                                <th>M</th>
+                                <th>F</th>
+                                <th>T</th>
+                            @endforeach
+                            <th class="total-group">M</th>
+                            <th class="total-group">F</th>
+                            <th class="total-group">T</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($schools as $school)
+                            <tr>
+                                <td class="school-cell">
+                                    <strong>{{ $school->school_name }}</strong>
+                                    <div class="muted">{{ $school->school_code }}</div>
+                                </td>
+                                @foreach ($gradeColumns as $grade)
+                                    @php($gradeRow = $school->grades[$grade['level']])
+                                    <td class="num">{{ $gradeRow->male_learners ? number_format($gradeRow->male_learners) : '' }}</td>
+                                    <td class="num">{{ $gradeRow->female_learners ? number_format($gradeRow->female_learners) : '' }}</td>
+                                    <td class="num">{{ $gradeRow->learners ? number_format($gradeRow->learners) : '-' }}</td>
+                                @endforeach
+                                <td class="num total-group">{{ $school->male_learners ? number_format($school->male_learners) : '' }}</td>
+                                <td class="num total-group">{{ $school->female_learners ? number_format($school->female_learners) : '' }}</td>
+                                <td class="num total-group">{{ number_format($school->learners) }}</td>
+                                <td class="spacer-cell" aria-hidden="true"></td>
+                                <td class="num">{{ number_format($school->actual_classrooms) }}</td>
+                                <td class="num">{{ number_format($school->sections) }}</td>
+                                <td class="num">{{ number_format($school->classes_to_organize) }}</td>
+                                <td class="num">{{ number_format($school->class_size, 2) }}</td>
+                                <td class="num">{{ number_format($school->available_teachers) }}</td>
+                                <td class="num">{{ number_format($school->required_teachers) }}</td>
+                                <td class="num">
+                                    <span class="badge {{ $school->excess_shortage < 0 ? 'danger' : 'ok' }}">
+                                        {{ number_format($school->excess_shortage) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="{{ 12 + ($gradeColumns->count() * 3) }}">
+                                    No High School audit data yet. Run <strong>php artisan audit:import</strong>.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            @endif
         </div>
     </section>
 </x-layouts.app>

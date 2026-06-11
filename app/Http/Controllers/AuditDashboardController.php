@@ -17,16 +17,19 @@ class AuditDashboardController extends Controller
 
     public function index(Request $request): View
     {
-        $import = DB::table('audit_imports')->latest('imported_at')->first();
-        $auditRows = $this->auditRows($request->user()->school_code);
-        $gradeColumns = $this->gradeColumns();
+        $basicEducation = $this->educationLevel($request);
+        $import = DB::table('audit_imports')
+            ->where('education_level', $basicEducation)
+            ->latest('imported_at')
+            ->first();
+        $auditRows = $this->auditRows($request->user()->school_code, $basicEducation);
+        $gradeColumns = $this->gradeColumns($basicEducation);
         $schools = $auditRows
             ->groupBy('school_code')
-            ->map(fn (Collection $rows, string $schoolCode) => $this->schoolAggregate($schoolCode, $rows))
+            ->map(fn (Collection $rows, string $schoolCode) => $this->schoolAggregate($schoolCode, $rows, $basicEducation))
             ->values();
         $totals = $this->totalsFromSchools($schools);
         $schoolYear = $request->query('school_year', $import->school_year ?? '2025-2026');
-        $basicEducation = $request->query('basic_education', 'Elementary');
 
         return view('dashboard', compact('import', 'totals', 'schools', 'gradeColumns', 'schoolYear', 'basicEducation'));
     }
@@ -34,8 +37,10 @@ class AuditDashboardController extends Controller
     public function schools(Request $request): View
     {
         $assignedSchool = $request->user()->school_code;
+        $basicEducation = $this->educationLevel($request);
         $selectedSchool = $assignedSchool ?: $request->query('school');
         $schoolOptions = DB::table('school_grade_audits')
+            ->where('education_level', $basicEducation)
             ->when($assignedSchool, fn ($query) => $query->where('school_code', $assignedSchool))
             ->distinct()
             ->orderBy('school_code')
@@ -45,11 +50,12 @@ class AuditDashboardController extends Controller
                 'name' => $this->schoolName($code),
             ]);
 
-        if (! $selectedSchool && $schoolOptions->isNotEmpty()) {
-            $selectedSchool = $schoolOptions->first()['code'];
+        if (! $schoolOptions->contains(fn ($school) => $school['code'] === $selectedSchool)) {
+            $selectedSchool = $schoolOptions->first()['code'] ?? null;
         }
 
         $rowsBySchool = DB::table('school_grade_audits')
+            ->where('education_level', $basicEducation)
             ->when($assignedSchool, fn ($query) => $query->where('school_code', $assignedSchool))
             ->orderBy('school_code')
             ->orderBy('grade_level')
@@ -73,8 +79,10 @@ class AuditDashboardController extends Controller
 
         $selectedSchoolName = $this->schoolName($selectedSchool);
         $summary = $this->totalsFromRows($rows);
-        $schoolYear = DB::table('audit_imports')->latest('imported_at')->value('school_year') ?? '2025-2026';
-        $basicEducation = 'Elementary';
+        $schoolYear = DB::table('audit_imports')
+            ->where('education_level', $basicEducation)
+            ->latest('imported_at')
+            ->value('school_year') ?? '2025-2026';
 
         return view('schools', compact('schoolOptions', 'schoolAudits', 'selectedSchool', 'selectedSchoolName', 'rows', 'summary', 'schoolYear', 'basicEducation'));
     }
@@ -90,8 +98,10 @@ class AuditDashboardController extends Controller
             'rows.*.male_learners' => ['nullable', 'integer', 'min:0', 'max:99999'],
             'rows.*.female_learners' => ['nullable', 'integer', 'min:0', 'max:99999'],
             'rows.*.learners' => ['required', 'integer', 'min:0', 'max:99999'],
+            'rows.*.actual_classrooms' => ['nullable', 'integer', 'min:0', 'max:999'],
             'rows.*.sections' => ['required', 'integer', 'min:1', 'max:999'],
             'rows.*.available_teachers' => ['required', 'integer', 'min:0', 'max:999'],
+            'rows.*.remarks' => ['nullable', 'string', 'max:1000'],
         ]);
 
         DB::transaction(function () use ($validated, $school) {
@@ -104,6 +114,7 @@ class AuditDashboardController extends Controller
                     : $submittedLearners;
                 $sections = max(1, (int) $data['sections']);
                 $availableTeachers = (int) $data['available_teachers'];
+                $actualClassrooms = (int) ($data['actual_classrooms'] ?? 0);
                 $auditRow = DB::table('school_grade_audits')
                     ->where('id', $id)
                     ->where('school_code', $school)
@@ -113,9 +124,10 @@ class AuditDashboardController extends Controller
                     continue;
                 }
 
-                $classesToOrganize = $this->calculator->classesToOrganize($learners, (int) $auditRow->grade_level);
+                $educationLevel = $auditRow->education_level ?? 'Elementary';
+                $classesToOrganize = $this->calculator->classesToOrganize($learners, (int) $auditRow->grade_level, $educationLevel);
                 $classSize = $sections > 0 ? round($learners / $sections, 2) : 0;
-                $requiredTeachers = $this->calculator->requiredTeachers($classesToOrganize, (int) $auditRow->grade_level);
+                $requiredTeachers = $this->calculator->requiredTeachers($classesToOrganize, (int) $auditRow->grade_level, $educationLevel);
                 $excessShortage = $availableTeachers - $requiredTeachers;
 
                 DB::table('school_grade_audits')
@@ -124,6 +136,7 @@ class AuditDashboardController extends Controller
                     ->update([
                         'male_learners' => $maleLearners,
                         'female_learners' => $femaleLearners,
+                        'actual_classrooms' => $actualClassrooms,
                         'learners' => $learners,
                         'sections' => $sections,
                         'class_size' => $classSize,
@@ -131,13 +144,21 @@ class AuditDashboardController extends Controller
                         'available_teachers' => $availableTeachers,
                         'surplus' => max($excessShortage, 0),
                         'shortage' => max(-$excessShortage, 0),
+                        'remarks' => blank($data['remarks'] ?? null) ? null : trim($data['remarks']),
                         'updated_at' => now(),
                     ]);
             }
         });
 
+        $educationLevel = $this->educationLevelForSchool($school);
+        $routeParameters = ['school' => $school];
+
+        if ($educationLevel === 'High School') {
+            $routeParameters['basic_education'] = $educationLevel;
+        }
+
         return redirect()
-            ->route('schools', ['school' => $school])
+            ->route('schools', $routeParameters)
             ->with('status', 'School audit updated. Classes, required teachers, and need teachers were recalculated.');
     }
 
@@ -147,21 +168,24 @@ class AuditDashboardController extends Controller
             return '';
         }
 
-        return config('audit_schools.'.$code, $code);
+        return config('audit_schools.'.$code)
+            ?? config('audit_secondary_schools.'.$code)
+            ?? $code;
     }
 
-    private function auditRows(?string $schoolCode = null): Collection
+    private function auditRows(?string $schoolCode, string $educationLevel): Collection
     {
         return DB::table('school_grade_audits')
+            ->where('education_level', $educationLevel)
             ->when($schoolCode, fn ($query) => $query->where('school_code', $schoolCode))
             ->orderBy('id')
             ->get()
             ->map(fn ($row) => $this->withComputedAuditValues($row));
     }
 
-    private function gradeColumns(): Collection
+    private function gradeColumns(string $educationLevel): Collection
     {
-        return collect($this->calculator->gradeLabels())
+        return collect($this->calculator->gradeLabels($educationLevel))
             ->map(fn (string $label, int $level) => [
                 'level' => $level,
                 'label' => $label,
@@ -169,13 +193,13 @@ class AuditDashboardController extends Controller
             ->values();
     }
 
-    private function schoolAggregate(string $schoolCode, Collection $rows): object
+    private function schoolAggregate(string $schoolCode, Collection $rows, string $educationLevel): object
     {
         $gradesByLevel = $rows->keyBy('grade_level');
         $grades = [];
 
-        foreach (array_keys($this->calculator->gradeLabels()) as $gradeLevel) {
-            $grades[$gradeLevel] = $gradesByLevel->get($gradeLevel) ?? $this->emptyGradeRow($gradeLevel);
+        foreach (array_keys($this->calculator->gradeLabels($educationLevel)) as $gradeLevel) {
+            $grades[$gradeLevel] = $gradesByLevel->get($gradeLevel) ?? $this->emptyGradeRow($gradeLevel, $educationLevel);
         }
 
         $totals = $this->totalsFromRows($rows);
@@ -192,6 +216,7 @@ class AuditDashboardController extends Controller
             'schools' => $schools->count(),
             'male_learners' => $schools->sum('male_learners'),
             'female_learners' => $schools->sum('female_learners'),
+            'actual_classrooms' => $schools->sum('actual_classrooms'),
             'learners' => $schools->sum('learners'),
             'sections' => $schools->sum('sections'),
             'classes_to_organize' => $schools->sum('classes_to_organize'),
@@ -211,6 +236,7 @@ class AuditDashboardController extends Controller
         return (object) [
             'male_learners' => $rows->sum('male_learners'),
             'female_learners' => $rows->sum('female_learners'),
+            'actual_classrooms' => $rows->sum('actual_classrooms'),
             'learners' => $rows->sum('learners'),
             'sections' => $rows->sum('sections'),
             'classes_to_organize' => $rows->sum('classes_to_organize'),
@@ -230,13 +256,15 @@ class AuditDashboardController extends Controller
         return $this->calculator->withComputedValues($row);
     }
 
-    private function emptyGradeRow(int $gradeLevel): object
+    private function emptyGradeRow(int $gradeLevel, string $educationLevel): object
     {
         return (object) [
             'grade_level' => $gradeLevel,
-            'grade_label' => $this->calculator->gradeLabels()[$gradeLevel] ?? 'Grade '.$gradeLevel,
+            'education_level' => $educationLevel,
+            'grade_label' => $this->calculator->gradeLabels($educationLevel)[$gradeLevel] ?? 'Grade '.$gradeLevel,
             'male_learners' => 0,
             'female_learners' => 0,
+            'actual_classrooms' => 0,
             'learners' => 0,
             'sections' => 0,
             'classes_to_organize' => 0,
@@ -246,7 +274,26 @@ class AuditDashboardController extends Controller
             'excess_shortage' => 0,
             'surplus' => 0,
             'shortage' => 0,
+            'remarks' => null,
         ];
+    }
+
+    private function educationLevel(Request $request): string
+    {
+        if ($request->user()->school_code) {
+            return $this->educationLevelForSchool($request->user()->school_code);
+        }
+
+        return $request->query('basic_education') === 'High School'
+            ? 'High School'
+            : 'Elementary';
+    }
+
+    private function educationLevelForSchool(string $schoolCode): string
+    {
+        return array_key_exists($schoolCode, config('audit_secondary_schools'))
+            ? 'High School'
+            : 'Elementary';
     }
 
 }

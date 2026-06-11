@@ -158,6 +158,8 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('data-school-select', false)
             ->assertSee('data-school-panel="BES"', false)
+            ->assertSee('<th class="spacer-cell" rowspan="2" aria-hidden="true"></th>', false)
+            ->assertSee('<td class="spacer-cell" aria-hidden="true"></td>', false)
             ->assertDontSee('View School');
     }
 

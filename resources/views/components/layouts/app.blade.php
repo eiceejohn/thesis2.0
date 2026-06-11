@@ -136,8 +136,12 @@
             min-width: 0; text-align: left; position: sticky; left: 0; background: #fff; z-index: 1;
         }
         .dashboard-summary thead .school-cell { z-index: 2; }
+        .secondary-summary { min-width: 1920px; }
         .school-audit-table { min-width: 1320px; }
         .school-audit-table th { text-transform: none; white-space: normal; vertical-align: bottom; }
+        .school-audit-table .spacer-cell {
+            width: 12px; min-width: 12px; padding: 0; background: var(--bg); border-top: 0; border-bottom: 0;
+        }
         .notice {
             border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;
             border: 1px solid #cfe1fb; background: var(--blue-soft); color: var(--blue-dark);
@@ -191,6 +195,7 @@
             border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; font-size: 14px;
         }
         .summary-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .summary-strip.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
         .mini-stat { background: var(--white); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
         .mini-stat span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
         .mini-stat strong { display: block; color: var(--blue-dark); font-size: 23px; }
@@ -199,7 +204,7 @@
         @media (max-width: 920px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar { position: static; }
-            .stats, .two, .summary-strip { grid-template-columns: 1fr; }
+            .stats, .two, .summary-strip, .summary-strip.six { grid-template-columns: 1fr; }
             .filter-field, .filter-field.wide { min-width: 100%; }
             .account-create-grid, .account-edit-panel { grid-template-columns: 1fr; }
             .accounts-toolbar { align-items: stretch; flex-direction: column; }

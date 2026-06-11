@@ -36,7 +36,10 @@ class DatabaseSeeder extends Seeder
 
     private function seedSchoolAccounts(): void
     {
-        foreach (config('audit_schools') as $schoolCode => $schoolName) {
+        $schools = collect(config('audit_schools'))
+            ->merge(config('audit_secondary_schools'));
+
+        foreach ($schools as $schoolCode => $schoolName) {
             User::firstOrCreate(
                 ['school_code' => $schoolCode],
                 [

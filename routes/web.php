@@ -16,7 +16,7 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [AuditDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [AuditDashboardController::class, 'index'])->middleware('admin')->name('dashboard');
     Route::get('/schools', [AuditDashboardController::class, 'schools'])->name('schools');
     Route::put('/schools/{school}', [AuditDashboardController::class, 'updateSchool'])->name('schools.update');
 

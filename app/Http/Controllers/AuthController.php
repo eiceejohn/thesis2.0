@@ -23,6 +23,11 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $user = Auth::user();
+
+            if ($user?->isSchool()) {
+                return redirect()->route('schools', ['school' => $user->school_code]);
+            }
 
             return redirect()->intended(route('dashboard'));
         }

@@ -231,8 +231,10 @@
                     <strong>{{ auth()->user()->name }}</strong>
                     {{ auth()->user()->isAdmin() ? 'Administrator' : auth()->user()->school_code }}
                 </div>
-                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Dashboard</a>
-                <a class="{{ request()->routeIs('schools') ? 'active' : '' }}" href="{{ route('schools') }}">School Audit</a>
+                @if (auth()->user()->isAdmin())
+                    <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Dashboard</a>
+                @endif
+                <a class="{{ request()->routeIs('schools') ? 'active' : '' }}" href="{{ auth()->user()->isSchool() ? route('schools', ['school' => auth()->user()->school_code]) : route('schools') }}">School Audit</a>
                 @if (auth()->user()->isAdmin())
                     <a class="{{ request()->routeIs('parameters') ? 'active' : '' }}" href="{{ route('parameters') }}">Parameters</a>
                     <a class="{{ request()->routeIs('accounts.*') ? 'active' : '' }}" href="{{ route('accounts.index') }}">Account Management</a>

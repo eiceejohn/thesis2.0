@@ -12,7 +12,7 @@ class SchoolAccountAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_school_account_only_sees_its_assigned_school(): void
+    public function test_school_account_only_sees_its_assigned_school_audit(): void
     {
         $schoolUser = User::factory()->create([
             'role' => 'school',
@@ -23,15 +23,29 @@ class SchoolAccountAccessTest extends TestCase
 
         $this->actingAs($schoolUser)
             ->get(route('dashboard'))
-            ->assertOk()
-            ->assertSee('Barangka Elementary School')
-            ->assertDontSee('Concepcion Elementary School');
+            ->assertForbidden();
 
         $this->actingAs($schoolUser)
             ->get(route('schools', ['school' => 'CES']))
             ->assertOk()
+            ->assertSee('School Audit')
+            ->assertDontSee('Dashboard')
             ->assertSee('Barangka Elementary School')
             ->assertDontSee('Concepcion Elementary School');
+    }
+
+    public function test_school_account_login_redirects_to_assigned_school_audit(): void
+    {
+        User::factory()->create([
+            'email' => 'bes@deped.gov.ph',
+            'role' => 'school',
+            'school_code' => 'BES',
+        ]);
+
+        $this->post(route('login.store'), [
+            'email' => 'bes@deped.gov.ph',
+            'password' => 'password',
+        ])->assertRedirect(route('schools', ['school' => 'BES']));
     }
 
     public function test_school_account_cannot_open_admin_pages_or_update_another_school(): void

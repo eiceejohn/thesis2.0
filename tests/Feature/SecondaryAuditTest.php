@@ -190,4 +190,47 @@ class SecondaryAuditTest extends TestCase
             ->assertSee('Actual Classes Organized')
             ->assertDontSee('Remarks');
     }
+
+    public function test_restore_high_school_command_restores_secondary_rows_without_touching_elementary(): void
+    {
+        $elementaryImportId = DB::table('audit_imports')->insertGetId([
+            'file_name' => 'elementary.xlsx',
+            'school_year' => '2025-2026',
+            'education_level' => 'Elementary',
+            'sheet_count' => 1,
+            'row_count' => 1,
+            'imported_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('school_grade_audits')->insert([
+            'audit_import_id' => $elementaryImportId,
+            'school_code' => 'BES',
+            'education_level' => 'Elementary',
+            'grade_level' => 1,
+            'learners' => 20,
+            'sections' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('audit:restore-high-school')
+            ->expectsOutput('Restored 99 High School audit rows.')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('school_grade_audits', [
+            'school_code' => 'BES',
+            'education_level' => 'Elementary',
+            'learners' => 20,
+        ]);
+        $this->assertSame(99, DB::table('school_grade_audits')->where('education_level', 'High School')->count());
+        $this->assertSame(17, DB::table('school_grade_audits')->where('education_level', 'High School')->distinct('school_code')->count('school_code'));
+        $this->assertDatabaseHas('school_grade_audits', [
+            'school_code' => 'BNHS',
+            'education_level' => 'High School',
+            'grade_level' => 7,
+            'learners' => 195,
+        ]);
+    }
 }

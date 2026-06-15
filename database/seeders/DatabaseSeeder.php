@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Services\HighSchoolAuditRestorer;
 use App\Services\TeacherAuditImporter;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -54,10 +55,15 @@ class DatabaseSeeder extends Seeder
 
     private function seedAuditData(): void
     {
-        if (DB::table('school_grade_audits')->exists()) {
-            return;
+        if (! DB::table('school_grade_audits')->exists()) {
+            $this->seedElementaryAuditData();
         }
 
+        app(HighSchoolAuditRestorer::class)->restore();
+    }
+
+    private function seedElementaryAuditData(): void
+    {
         $fixturePath = database_path('seeders/data/teacher_audit_seed.json');
 
         if (is_file($fixturePath)) {

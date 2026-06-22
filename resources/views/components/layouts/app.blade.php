@@ -3,6 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="{{ config('credits.creator.name', 'Eicee John G. Santiago') }}">
+    <meta name="creator" content="{{ config('credits.creator.name', 'Eicee John G. Santiago') }}">
+    <meta name="application-credit" content="{{ config('credits.statement', 'Teacher Audit System designed and developed by Eicee John G. Santiago.') }}">
+    <!-- System credit: {{ config('credits.statement', 'Teacher Audit System designed and developed by Eicee John G. Santiago.') }} -->
     <title>{{ $title ?? 'Teacher Audit System' }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <style>

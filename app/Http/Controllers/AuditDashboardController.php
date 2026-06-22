@@ -29,6 +29,7 @@ class AuditDashboardController extends Controller
             ->map(fn (Collection $rows, string $schoolCode) => $this->schoolAggregate($schoolCode, $rows, $basicEducation))
             ->values();
         $totals = $this->totalsFromSchools($schools);
+        $totals->grades = $this->gradeTotalsFromSchools($schools, $gradeColumns);
         $schoolYear = $request->query('school_year', $import->school_year ?? '2025-2026');
 
         return view('dashboard', compact('import', 'totals', 'schools', 'gradeColumns', 'schoolYear', 'basicEducation'));
@@ -229,6 +230,26 @@ class AuditDashboardController extends Controller
                 ? round($schools->sum('learners') / $schools->sum('sections'), 2)
                 : 0,
         ];
+    }
+
+    private function gradeTotalsFromSchools(Collection $schools, Collection $gradeColumns): array
+    {
+        $totals = [];
+
+        foreach ($gradeColumns as $grade) {
+            $level = $grade['level'];
+            $gradeRows = $schools
+                ->map(fn ($school) => $school->grades[$level] ?? null)
+                ->filter();
+
+            $totals[$level] = (object) [
+                'male_learners' => $gradeRows->sum('male_learners'),
+                'female_learners' => $gradeRows->sum('female_learners'),
+                'learners' => $gradeRows->sum('learners'),
+            ];
+        }
+
+        return $totals;
     }
 
     private function totalsFromRows(Collection $rows): object

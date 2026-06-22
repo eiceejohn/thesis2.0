@@ -142,6 +142,16 @@
         .school-audit-table .spacer-cell {
             width: 12px; min-width: 12px; padding: 0; background: var(--bg); border-top: 0; border-bottom: 0;
         }
+        .total-row td {
+            background: #eaf1ff; color: var(--ink); font-weight: 800; border-top: 2px solid #b8d0f5;
+        }
+        .total-row .badge { font-weight: 800; }
+        .total-row .total-group { background: #dbeafe; }
+        .dashboard-summary .total-row .school-cell { background: #eaf1ff; }
+        .dashboard-summary .total-row .spacer-cell,
+        .school-audit-table .total-row .spacer-cell {
+            background: var(--bg); border-top: 0;
+        }
         .notice {
             border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;
             border: 1px solid #cfe1fb; background: var(--blue-soft); color: var(--blue-dark);

@@ -132,6 +132,31 @@
                             </td>
                         </tr>
                     @endforelse
+                    @if ($schools->isNotEmpty())
+                        <tr class="total-row">
+                            <td class="school-cell"><strong>TOTAL</strong></td>
+                            @foreach ($gradeColumns as $grade)
+                                @php($gradeTotal = $totals->grades[$grade['level']] ?? (object) ['male_learners' => 0, 'female_learners' => 0, 'learners' => 0])
+                                <td class="num">{{ number_format($gradeTotal->male_learners) }}</td>
+                                <td class="num">{{ number_format($gradeTotal->female_learners) }}</td>
+                                <td class="num">{{ number_format($gradeTotal->learners) }}</td>
+                            @endforeach
+                            <td class="num total-group">{{ number_format($totals->male_learners) }}</td>
+                            <td class="num total-group">{{ number_format($totals->female_learners) }}</td>
+                            <td class="num total-group">{{ number_format($totals->learners) }}</td>
+                            <td class="spacer-cell" aria-hidden="true"></td>
+                            <td class="num">{{ number_format($totals->sections) }}</td>
+                            <td class="num">{{ number_format($totals->classes_to_organize) }}</td>
+                            <td class="num">{{ number_format($totals->class_size, 2) }}</td>
+                            <td class="num">{{ number_format($totals->available_teachers) }}</td>
+                            <td class="num">{{ number_format($totals->required_teachers) }}</td>
+                            <td class="num">
+                                <span class="badge {{ $totals->excess_shortage < 0 ? 'danger' : 'ok' }}">
+                                    {{ number_format($totals->excess_shortage) }}
+                                </span>
+                            </td>
+                        </tr>
+                    @endif
                 </tbody>
                 </table>
             @else
@@ -214,6 +239,32 @@
                                 </td>
                             </tr>
                         @endforelse
+                        @if ($schools->isNotEmpty())
+                            <tr class="total-row">
+                                <td class="school-cell"><strong>TOTAL</strong></td>
+                                @foreach ($gradeColumns as $grade)
+                                    @php($gradeTotal = $totals->grades[$grade['level']] ?? (object) ['male_learners' => 0, 'female_learners' => 0, 'learners' => 0])
+                                    <td class="num">{{ number_format($gradeTotal->male_learners) }}</td>
+                                    <td class="num">{{ number_format($gradeTotal->female_learners) }}</td>
+                                    <td class="num">{{ number_format($gradeTotal->learners) }}</td>
+                                @endforeach
+                                <td class="num total-group">{{ number_format($totals->male_learners) }}</td>
+                                <td class="num total-group">{{ number_format($totals->female_learners) }}</td>
+                                <td class="num total-group">{{ number_format($totals->learners) }}</td>
+                                <td class="spacer-cell" aria-hidden="true"></td>
+                                <td class="num">{{ number_format($totals->actual_classrooms) }}</td>
+                                <td class="num">{{ number_format($totals->sections) }}</td>
+                                <td class="num">{{ number_format($totals->classes_to_organize) }}</td>
+                                <td class="num">{{ number_format($totals->class_size, 2) }}</td>
+                                <td class="num">{{ number_format($totals->available_teachers) }}</td>
+                                <td class="num">{{ number_format($totals->required_teachers) }}</td>
+                                <td class="num">
+                                    <span class="badge {{ $totals->excess_shortage < 0 ? 'danger' : 'ok' }}">
+                                        {{ number_format($totals->excess_shortage) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             @endif

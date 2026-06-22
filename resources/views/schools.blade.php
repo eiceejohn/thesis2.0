@@ -175,6 +175,48 @@
                                     <tr><td colspan="{{ $basicEducation === 'High School' ? 12 : 11 }}">No {{ $basicEducation }} audit records found.</td></tr>
                                 @endforelse
                             </tbody>
+                            @if ($audit->rows->isNotEmpty())
+                                <tfoot>
+                                    @if ($basicEducation === 'Elementary')
+                                        <tr class="total-row">
+                                            <td><strong>TOTAL</strong></td>
+                                            <td class="num" data-panel-total="male_learners">{{ number_format($audit->summary->male_learners) }}</td>
+                                            <td class="num" data-panel-total="female_learners">{{ number_format($audit->summary->female_learners) }}</td>
+                                            <td class="num" data-panel-total="learners">{{ number_format($audit->summary->learners) }}</td>
+                                            <td class="spacer-cell" aria-hidden="true"></td>
+                                            <td class="num" data-panel-total="sections">{{ number_format($audit->summary->sections) }}</td>
+                                            <td class="num" data-panel-total="classes_to_organize">{{ number_format($audit->summary->classes_to_organize) }}</td>
+                                            <td class="num" data-panel-total="class_size">{{ number_format(round($audit->summary->class_size)) }}</td>
+                                            <td class="num" data-panel-total="available_teachers">{{ number_format($audit->summary->available_teachers) }}</td>
+                                            <td class="num" data-panel-total="required_teachers">{{ number_format($audit->summary->required_teachers) }}</td>
+                                            <td class="num">
+                                                <span class="badge {{ $audit->summary->excess_shortage < 0 ? 'danger' : 'ok' }}" data-panel-total="excess_shortage">
+                                                    {{ number_format($audit->summary->excess_shortage) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @else
+                                        <tr class="total-row">
+                                            <td><strong>TOTAL</strong></td>
+                                            <td class="num" data-panel-total="male_learners">{{ number_format($audit->summary->male_learners) }}</td>
+                                            <td class="num" data-panel-total="female_learners">{{ number_format($audit->summary->female_learners) }}</td>
+                                            <td class="num" data-panel-total="learners">{{ number_format($audit->summary->learners) }}</td>
+                                            <td class="spacer-cell" aria-hidden="true"></td>
+                                            <td class="num" data-panel-total="actual_classrooms">{{ number_format($audit->summary->actual_classrooms) }}</td>
+                                            <td class="num" data-panel-total="sections">{{ number_format($audit->summary->sections) }}</td>
+                                            <td class="num" data-panel-total="classes_to_organize">{{ number_format($audit->summary->classes_to_organize) }}</td>
+                                            <td class="num" data-panel-total="class_size">{{ number_format(round($audit->summary->class_size)) }}</td>
+                                            <td class="num" data-panel-total="available_teachers">{{ number_format($audit->summary->available_teachers) }}</td>
+                                            <td class="num" data-panel-total="required_teachers">{{ number_format($audit->summary->required_teachers) }}</td>
+                                            <td class="num">
+                                                <span class="badge {{ $audit->summary->excess_shortage < 0 ? 'danger' : 'ok' }}" data-panel-total="excess_shortage">
+                                                    {{ number_format($audit->summary->excess_shortage) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tfoot>
+                            @endif
                         </table>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:10px; padding:16px 18px 18px">
@@ -243,20 +285,40 @@
                 updateBadge(row.querySelector('[data-role="excess_shortage"]'), excessShortage);
 
                 return {
+                    male_learners: male,
+                    female_learners: female,
                     learners: total,
                     sections,
                     actual_classrooms: numberValue(actualClassroomsInput),
+                    classes_to_organize: classesToOrganize,
                     required_teachers: requiredTeachers,
                     available_teachers: availableTeachers,
                     excess_shortage: excessShortage,
                 };
             };
 
+            const updatePanelTotals = (panel, totals) => {
+                panel.querySelectorAll('[data-panel-total]').forEach((element) => {
+                    const key = element.dataset.panelTotal;
+                    const value = Number.isFinite(totals[key]) ? totals[key] : 0;
+
+                    if (key === 'excess_shortage') {
+                        updateBadge(element, value);
+                        return;
+                    }
+
+                    element.textContent = showNumber(key === 'class_size' ? Math.round(value) : value);
+                });
+            };
+
             const recalculatePanel = (panel) => {
                 const totals = {
+                    male_learners: 0,
+                    female_learners: 0,
                     learners: 0,
                     sections: 0,
                     actual_classrooms: 0,
+                    classes_to_organize: 0,
                     required_teachers: 0,
                     available_teachers: 0,
                     excess_shortage: 0,
@@ -269,11 +331,15 @@
                     });
                 });
 
+                totals.class_size = totals.sections > 0 ? totals.learners / totals.sections : 0;
+
                 Object.entries(summaryValues).forEach(([key, element]) => {
                     if (element) {
                         element.textContent = showNumber(totals[key]);
                     }
                 });
+
+                updatePanelTotals(panel, totals);
             };
 
             const currentPanel = () => panels.find((panel) => !panel.hidden);
